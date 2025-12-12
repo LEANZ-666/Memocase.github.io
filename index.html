@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pengingat PR Dinamis IoT</title>
+    
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <style>
+        /* GAYA DASAR */
+        body { font-family: sans-serif; background-color: #f0f2f5; display: flex; justify-content: center; padding-top: 20px; margin: 0; transition: background-color 0.3s; }
+        .aplikasi-hp { width: 100%; max-width: 400px; background-color: white; min-height: 90vh; box-shadow: 0 4px 15px rgba(0,0,0,0.1); position: relative; transition: background-color 0.3s, box-shadow 0.3s; }
+        .tombol-mode { background: none; border: none; color: white; cursor: pointer; padding: 5px; font-size: 16px; }
+
+        /* HEADER & STATISTIK */
+        .header { background: linear-gradient(to right, #4facfe, #a18cd1); color: white; padding: 25px; border-bottom-left-radius: 20px; border-bottom-right-radius: 20px; transition: background 0.3s; }
+        .baris-atas { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .judul-app { font-size: 18px; font-weight: bold; display: flex; align-items: center; gap: 10px; }
+        .container-statistik { display: flex; gap: 10px; justify-content: space-between; }
+        .kotak-statistik { background-color: rgba(255, 255, 255, 0.2); flex: 1; text-align: center; padding: 10px; border-radius: 10px; transition: background-color 0.3s; }
+        .angka-besar { font-size: 20px; font-weight: bold; }
+        .label-kecil { font-size: 12px; opacity: 0.8; }
+
+        /* KONTEN & LIST */
+        .konten { padding: 20px; }
+        .kotak-info { padding: 15px; border-radius: 10px; font-size: 13px; margin-bottom: 15px; display: flex; gap: 10px; }
+        .info-orange { background-color: #fff7ed; border: 1px solid #ffedd5; color: #c2410c; }
+        .info-biru { background-color: #eff6ff; border: 1px solid #dbeafe; color: #1e40af; }
+        .filter-tab { background-color: #f3f4f6; padding: 5px; border-radius: 10px; display: flex; margin-bottom: 20px; transition: background-color 0.3s; }
+        .tombol-tab { flex: 1; border: none; background: none; padding: 10px; cursor: pointer; font-weight: bold; color: #6b7280; transition: background-color 0.2s; }
+        .tombol-tab.aktif { background-color: #3b82f6; color: white; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        .list-tugas { display: flex; flex-direction: column; gap: 15px; }
+        .kartu-tugas { border: 1px solid #e5e7eb; border-radius: 15px; padding: 15px; display: flex; gap: 15px; background-color: white; transition: all 0.3s; }
+        .kartu-tugas.selesai { opacity: 0.6; border-left: 5px solid #10b981; }
+        .bulat-cek { width: 20px; height: 20px; border-radius: 50%; margin-top: 5px; border: 2px solid #d1d5db; background-color: white; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+        .kartu-tugas.selesai .bulat-cek { background-color: #10b981; border-color: #10b981; color: white; font-size: 12px; }
+        .detail-tugas h3 { margin: 5px 0; font-size: 16px; color: #333; transition: color 0.3s; }
+        .mata-pelajaran, .waktu { font-size: 12px; color: #6b7280; display: flex; align-items: center; gap: 5px; transition: color 0.3s; }
+        .badge-status { display: inline-block; padding: 4px 8px; border-radius: 5px; font-size: 10px; font-weight: bold; margin-top: 10px; }
+        .badge-yellow { background-color: #fef9c3; color: #854d0e; } 
+        .badge-gray { background-color: #e5e7eb; color: #4b5563; } 
+        .badge-green { background-color: #d1fae5; color: #065f46; } 
+
+        .btn { border: none; padding: 10px; border-radius: 8px; flex: 1; cursor: pointer; font-weight: bold; }
+        .btn-simpan { background-color: #dc3545; color: white; }
+
+        /* DARK MODE */
+        .dark-mode { background-color: #121212; color: #e0e0e0; }
+        .dark-mode .aplikasi-hp { background-color: #1e1e1e; box-shadow: 0 4px 15px rgba(255, 255, 255, 0.1); }
+        .dark-mode .header { background: linear-gradient(to right, #2c3e50, #34495e); }
+        .dark-mode .kotak-statistik { background-color: rgba(255, 255, 255, 0.1); }
+        .dark-mode .kartu-tugas { background-color: #2a2a2a; border: 1px solid #3a3a3a; }
+        .dark-mode .detail-tugas h3 { color: #ffffff; }
+        .dark-mode .mata-pelajaran, .dark-mode .waktu { color: #aaaaaa; }
+        .dark-mode .filter-tab { background-color: #2a2a2a; }
+        .dark-mode .tombol-tab { color: #999999; }
+        .dark-mode .tombol-tab.aktif { background-color: #007bff; color: white; }
+        .dark-mode .info-biru { background-color: #2c3e50; border: 1px solid #34495e; color: #b3cddf; }
+        .dark-mode .info-orange { background-color: #583d1c; border: 1px solid #6e4e2c; color: #ffb74d; }
+    </style>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js" type="text/javascript"></script>
+</head>
+<body onload="filterTasks('all')"> 
+    
+    <div class="aplikasi-hp">
+        
+        <div class="header">
+            <div class="baris-atas">
+                <div class="judul-app">
+                    <i class="fa-solid fa-book-open"></i> Pengingat PR
+                </div>
+                <div>
+                    <button class="tombol-mode" onclick="toggleDarkMode()">
+                        <i id="modeIcon" class="fa-solid fa-moon"></i>
+                    </button>
+                </div>
+            </div>
+            
+            <div class="container-statistik">
+                <div class="kotak-statistik">
+                    <div id="totalCount" class="angka-besar">0</div>
+                    <div class="label-kecil">Total</div>
+                </div>
+                <div class="kotak-statistik">
+                    <div id="pendingCount" class="angka-besar">0</div>
+                    <div class="label-kecil">Belum</div>
+                </div>
+                <div class="kotak-statistik">
+                    <div id="completedCount" class="angka-besar">0</div>
+                    <div class="label-kecil">Selesai</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="konten">
+
+            <div id="infoBoxStatus" class="kotak-info info-orange">
+                <i class="fa-solid fa-cloud"></i>
+                <div>
+                    <strong>Status Koneksi:</strong> <span id="mqttStatusText">Memulai...</span><br>
+                    <span id="mqttLastMsg" style="font-size: 11px; opacity: 0.8;"></span>
+                </div>
+            </div>
+
+            <div id="infoBoxKontrol" class="kotak-info info-biru" style="display: none;">
+                <i class="fa-solid fa-bell"></i>
+                <div style="display: flex; justify-content: space-between; flex-grow: 1; align-items: center;">
+                    <span id="alatStatusText">ALAT: NORMAL</span>
+                    <button class="btn btn-simpan" style="padding: 5px 10px; font-size: 12px; flex-grow: 0;" onclick="sendControl('RESET')">
+                        <i class="fa-solid fa-power-off"></i> Reset Alat
+                    </button>
+                </div>
+            </div>
+
+            <div class="filter-tab">
+                <button id="tabAll" class="tombol-tab aktif" onclick="filterTasks('all')">Semua</button>
+                <button id="tabPending" class="tombol-tab" onclick="filterTasks('pending')">Belum</button>
+                <button id="tabCompleted" class="tombol-tab" onclick="filterTasks('completed')">Selesai</button>
+            </div>
+
+            <div id="listTugas" class="list-tugas">
+                <p style="text-align: center; color: #666; padding: 30px;">Menunggu data PR dari alat...</p>
+            </div>
+        </div>
+        
+    </div>
+    
+    <script>
+        // --- Kredensial Koneksi MQTT ---
+        // DETAIL CLUSTER DARI SCREENSHOT ANDA
+        const BROKER_HOST = '79fffaa55284607e45783d325025b87.a1.eu.hivemq.cloud'; // URL UNIK CLUSTER ANDA
+        const BROKER_PORT = 8883; // PORT TLS/WEBSOCKET
+        
+        const CLIENT_ID = 'web-memocase-' + parseInt(Math.random() * 1000);
+        const TOPIC_STATUS = 'memocase/status_json'; 
+        const TOPIC_CONTROL = 'memocase/control';  
+
+        let mqttClient = null;
+        let prDataRealtime = []; 
+        let currentFilter = 'all'; 
+
+        // FUNGSI INTI MQTT
+        function connectMQTT() {
+            mqttClient = new Paho.MQTT.Client(BROKER_HOST, BROKER_PORT, CLIENT_ID);
+            mqttClient.onConnectionLost = onConnectionLost;
+            mqttClient.onMessageArrived = onMessageArrived;
+            updateStatusBox('Menghubungkan ke cluster HiveMQ...', '#ffc107', 'fa-cloud');
+            
+            // PENGATURAN SSL/TLS UNTUK PORT 8883
+            mqttClient.connect({ 
+                onSuccess: onConnect, 
+                useSSL: true, // <<< WAJIB!
+                timeout: 3 
+                // Jika Cluster Anda memerlukan Username/Password, tambahkan di sini:
+                // userName: "username_anda", 
+                // password: "password_anda"
+            });
+        }
+
+        function onConnect() {
+            console.log("MQTT Connected!");
+            mqttClient.subscribe(TOPIC_STATUS);
+            document.getElementById('infoBoxKontrol').style.display = 'flex';
+            updateStatusBox('Terkoneksi ke Cluster', '#28a745', 'fa-cloud-upload-alt');
+        }
+
+        function onConnectionLost(responseObject) {
+            if (responseObject.errorCode !== 0) {
+                console.log("Koneksi Hilang: " + responseObject.errorMessage);
+                updateStatusBox('Koneksi Terputus. Mencoba terhubung kembali...', '#dc3545', 'fa-cloud-download-alt');
+                setTimeout(connectMQTT, 5000); 
+            }
+        }
+
+        function sendControl(command) {
+            if (mqttClient && mqttClient.isConnected()) {
+                const message = new Paho.MQTT.Message(command);
+                message.destinationName = TOPIC_CONTROL;
+                mqttClient.send(message);
+                console.log(`Perintah dikirim: ${command}`);
+            } else {
+                alert("Koneksi MQTT tidak aktif. Alat mungkin Offline.");
+            }
+        }
+
+        function onMessageArrived(message) {
+            const payload = message.payloadString;
+            document.getElementById('mqttLastMsg').textContent = `Pesan terakhir: ${new Date().toLocaleTimeString()}`;
+            
+            if (message.destinationName === TOPIC_STATUS) {
+                try {
+                    const data = JSON.parse(payload);
+                    prDataRealtime = data.prs || []; 
+                    let alatStatus = data.alat_status ? data.alat_status.toUpperCase() : 'UNKNOWN';
+                    document.getElementById('alatStatusText').textContent = `ALAT: ${alatStatus}`;
+                    
+                    const infoBoxKontrol = document.getElementById('infoBoxKontrol');
+                    if (alatStatus.includes("ALARM_TRIGGERED")) {
+                         infoBoxKontrol.style.backgroundColor = '#f8d7da'; 
+                         infoBoxKontrol.style.borderColor = '#f5c6cb';
+                         infoBoxKontrol.style.color = '#721c24';
+                    } else {
+                         infoBoxKontrol.style.backgroundColor = '#eff6ff'; 
+                         infoBoxKontrol.style.borderColor = '#dbeafe';
+                         infoBoxKontrol.style.color = '#1e40af';
+                    }
+
+                    filterTasks(currentFilter); 
+
+                } catch (e) {
+                    console.error("Gagal parse JSON dari alat:", e);
+                    document.getElementById('mqttStatusText').textContent = 'ERROR: Data JSON tidak valid.';
+                }
+            }
+        }
+
+        // FUNGSI UI & FILTER (TIDAK ADA PERUBAHAN)
+        function updateCounters() {
+            const total = prDataRealtime.length; 
+            const pending = prDataRealtime.filter(t => t.status === 'pending').length;
+            const completed = prDataRealtime.filter(t => t.status === 'completed').length;
+            document.getElementById('totalCount').innerText = total;
+            document.getElementById('pendingCount').innerText = pending;
+            document.getElementById('completedCount').innerText = completed;
+        }
+
+        function renderTasks(tasks) {
+            const container = document.getElementById('listTugas');
+            let htmlContent = '';
+            if (tasks.length === 0) {
+                container.innerHTML = `<p style="text-align: center; color: #666; padding: 30px;">Tidak ada PR dalam kategori ini, atau alat belum mengirim data.</p>`;
+                return;
+            }
+
+            tasks.forEach(tugas => {
+                const isCompleted = tugas.status === 'completed';
+                const checkIcon = isCompleted ? '<i class="fa-solid fa-check"></i>' : '';
+                const taskClass = isCompleted ? 'kartu-tugas selesai' : 'kartu-tugas';
+                let badgeText = tugas.status === 'completed' ? 'Selesai' : (tugas.status_pengerjaan || 'Belum dimulai');
+                let badgeClass = tugas.status === 'completed' ? 'badge-green' : 'badge-gray';
+
+                htmlContent += `
+                    <div class="${taskClass}">
+                        <div class="bulat-cek" onclick="sendControl('TOGGLE_PR_${tugas.id}')" title="Klik untuk mengubah status PR ID ${tugas.id}">
+                            ${checkIcon}
+                        </div>
+                        <div class="detail-tugas">
+                            <div class="mata-pelajaran">
+                                <i class="fa-solid fa-book"></i> ${tugas.mapel}
+                            </div>
+                            <h3 style="${isCompleted ? 'text-decoration: line-through;' : ''}">${tugas.judul}</h3>
+                            <div class="waktu">
+                                <i class="fa-regular fa-calendar"></i> ${tugas.deadline}
+                                <i class="fa-regular fa-clock" style="margin-left: 5px;"></i> ${tugas.jam}
+                            </div>
+                            <div class="badge-status ${badgeClass}">
+                                <i class="fa-solid fa-pen-nib"></i> ${badgeText}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+            container.innerHTML = htmlContent;
+        }
+
+        function filterTasks(status) {
+            currentFilter = status; 
+            document.querySelectorAll('.tombol-tab').forEach(btn => { btn.classList.remove('aktif'); });
+
+            let filteredTasks = prDataRealtime;
+            let activeTabId = 'tabAll';
+            if (status === 'pending') {
+                filteredTasks = prDataRealtime.filter(t => t.status === 'pending');
+                activeTabId = 'tabPending';
+            } else if (status === 'completed') {
+                filteredTasks = prDataRealtime.filter(t => t.status === 'completed');
+                activeTabId = 'tabCompleted';
+            }
+            document.getElementById(activeTabId).classList.add('aktif');
+            renderTasks(filteredTasks);
+            updateCounters(); 
+        }
+
+        function updateStatusBox(text, color, icon) {
+             const infoBox = document.getElementById('infoBoxStatus');
+             infoBox.querySelector('#mqttStatusText').textContent = text;
+             infoBox.querySelector('i').className = `fa-solid ${icon}`;
+             infoBox.style.borderColor = color;
+             infoBox.style.backgroundColor = color + '20'; 
+        }
+
+        function toggleDarkMode() {
+            const body = document.body;
+            const icon = document.getElementById('modeIcon');
+            body.classList.toggle('dark-mode');
+            if (body.classList.contains('dark-mode')) {
+                icon.classList.remove('fa-moon');
+                icon.classList.add('fa-sun');
+            } else {
+                icon.classList.remove('fa-sun');
+                icon.classList.add('fa-moon');
+            }
+        }
+
+        // INISIALISASI
+        window.onload = connectMQTT;
+    </script>
+
+</body>
+</html>
